@@ -51,27 +51,38 @@
     <a id="clear-cache" class="btn btn-success" href="<?php echo $this->url(array(), 'manage-program-create') ?>">新建节目</a>
 </div>
 <div class="row">
+    <?php
+    $c = 0;
+    ?>
     <?php foreach ($this->resource as $p): ?>
         <div class="col-md-3 itm">
             <input type="hidden" class="tmp" value="<?php echo $p['id'] ?>"/>
             <div class="wp">
                 <p><?php echo $p['owner']->email . ' 上传' ?>
-                    <button class="pull-right btn btn-xs btn-danger remove-program">删除</button>
+                    <!--<button class="pull-right btn btn-xs btn-danger remove-program">删除</button>-->
+                    <?php if (!$this->specialModel->getSpecialByProgram($p["id"])): ?>
+                        <button type="button" class="btn btn-danger btn-sm remove-program">删除</button>
+                    <?php else: ?>
+                        <label class="xs">被引用</label>
+                    <?php endif; ?>
                 </p>
-                <div class="iwp">
+<!--                <div class="iwp">
                     <img width="100%" src="<?php echo $p['path'] ?>"/>
-                </div>
+                </div>-->
                 <div class='pwp'>
                     <p><?php echo $p['name'] ?></p>
                     <p><i><?php echo $p['sub_title'] ?></i></p>
                 </div>
                 <div class="btn-group">
                     <a href="<?php echo $this->url(array(), 'manage-program-save') . '?id=' . $p['id'] ?>" class="btn btn-info btn-sm">编辑</a>
-                    <a href="<?php echo $this->url(array(), 'manage-program-save') . '?copy=true&&id=' . $p['id'] ?>" class="btn btn-default btn-sm">复制</a>
-
+                    <!--<a href="<?php// echo $this->url(array(), 'manage-program-save') . '?copy=true&&id=' . $p['id'] ?>" class="btn btn-default btn-sm">复制</a>-->
                 </div>
             </div>
         </div>
+        <?php $c ++; ?>
+        <?php if ($c % 4 == 0): ?>
+            <div class="clearfix"></div>
+        <?php endif; ?>
     <?php endforeach; ?>
 </div>
 <div class="row">

@@ -52,7 +52,9 @@ abstract class Angel_Model_AbstractModel {
     public function save($id, $data, $notFoundException = Exception, $exceptionMessage = "") {
         $result = false;
         if ($data) {
+            
             $target = $this->getById($id);
+            
             if (!$target) {
                 throw new $notFoundException($exceptionMessage);
             }
@@ -137,6 +139,17 @@ abstract class Angel_Model_AbstractModel {
         } else {
             $result = $query->getQuery()->execute();
         }
+        return $result;
+    }
+    
+    public function getOneBy($condition = false) {
+        $query = $this->_dm->createQueryBuilder($this->_document_class);
+        if (is_array($condition)) {
+            foreach ($condition as $key => $val) {
+                $query = $query->field($key)->equals($val);
+            }
+        }
+        $result = $query->getQuery()->getSingleResult();
         return $result;
     }
 

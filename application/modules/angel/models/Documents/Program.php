@@ -25,8 +25,13 @@ class Program extends AbstractDocument {
     /** @ODM\Int */
     protected $duration;
 
-    /** @ODM\ReferenceOne(targetDocument="\Documents\Category") */
-    protected $category;
+    //** @ODM\ReferenceOne(targetDocument="\Documents\Category") */
+   // protected $category;
+    /** @ODM\String */
+    protected $time;
+    
+    /** @ODM\String */
+    protected $keyWordIds;
 
     /** @ODM\String */
     protected $description;
@@ -36,9 +41,15 @@ class Program extends AbstractDocument {
 
     /** @ODM\String */
     protected $status;                      // 节目状态：online, offline
+    
+    //** @ODM\String */
+    //protected $keywordsId; 
 
     /** @ODM\ReferenceOne(targetDocument="\Documents\User") */
     protected $owner;
+    
+    /** @ODM\String */
+    protected $captions; 
 
     /**
      * 添加图片

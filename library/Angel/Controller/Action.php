@@ -188,4 +188,146 @@ class Angel_Controller_Action extends Zend_Controller_Action {
         }
     }
 
+    protected function userLogout($defaultRedirectRoute) {
+        Zend_Auth::getInstance()->clearIdentity();
+
+        $angel = $this->request->getCookie($this->bootstrap_options['cookie']['remember_me']);
+        if (!empty($angel)) {
+            $this->getModel('token')->disableToken($angel);
+        }
+
+        $this->_redirect($this->view->url(array(), $defaultRedirectRoute));
+    }
+
+    protected function userRegister($defaultRedirectRoute, $pageTitle, $userType) {
+        if ($this->request->isPost()) {
+            $msg = "注册成功!";
+            $code = 200;
+            $error = "";
+            // POST METHOD
+            $email = $this->request->getParam('email');
+            if ($email) {
+                $email = strtolower($email);
+            }
+            $username = $this->request->getParam('username');
+            $password = $this->request->getParam('password');
+
+            $result = false;
+
+            try {
+                $userModel = $this->getModel('user');
+                $isEmailExist = $userModel->isEmailExist($email);
+                
+                if ($isEmailExist) {
+                    $error = "该邮箱已经存在，不能重复注册";
+                } else {
+                    $result = null;
+                    
+                    if ($userType == 'user') {
+                        $result = $userModel->addUser($email, $password, $username, Zend_Session::getId(), false);
+                    } else if ($userType == 'admin') {
+                        $result = $userModel->addManageUser($email, $password, Zend_Session::getId(), false);
+                    } else {
+                        $error = "invalid request";
+                    }
+                }
+                
+            } catch (Angel_Exception_User $e) {
+                $error = $e->getDetail();
+            }
+            
+            if ($error != "") {
+                $msg = $error;
+                $code = 500;
+            }
+            
+            if ($this->getParam('format') == 'json') {
+                $this->_helper->json(array('data' => $msg, 'code' => $code));
+            }
+            else {
+                if ($result) {
+                    $this->_redirect($this->view->url(array(), $defaultRedirectRoute) . '?register=success');
+                } else {
+                    $this->view->error = $msg;
+                }
+            }
+        }
+        
+        // GET METHOD
+        $this->view->title = $pageTitle;
+    }
+
+    protected function userLogin($defaultRedirectRoute, $pageTitle) {
+        $errorMsg = "登录失败，请重试或联系管理员";
+        $code = 200;
+        $uid = "";
+        
+        if ($this->request->isPost()) {
+            $email = $this->request->getParam('email');
+            if ($email) {
+                $email = strtolower($email);
+            }
+            $password = $this->request->getParam('password');
+            // remember's value: on or null
+            $remember = $this->request->getParam('remember', 'on');
+
+            try {
+                $userModel = $this->getModel('user');
+                $auth = $userModel->auth($email, $password);
+
+                $success = false;
+                $error = $errorMsg;
+                if ($auth['valid'] === true) {
+                    $ip = $this->getRealIpAddr();
+                    $result = $userModel->updateLoginInfo($auth['msg'], $ip);
+
+                    if ($result) {
+                        if ($remember == 'on') {
+                            setcookie($this->bootstrap_options['cookie']['remember_me'], $userModel->getRememberMeValue($auth['msg'], $ip), time() + $this->bootstrap_options['token']['expiry']['remember_me'] * 60, '/', $this->bootstrap_options['site']['domain']);
+                        }
+                        $success = true;
+                    }
+                }
+            } catch (Angel_Exception_User $e) {
+                $error = $e->getMessage();
+                $errorMsg = $error;
+            }
+            
+            $url = "";
+            
+            if ($success) {
+                $goto = $this->getParam('goto');
+                $url = $this->view->url(array(), $defaultRedirectRoute);
+                
+                if ($goto) {
+                    $url = $goto;
+                }
+                
+                $errorMsg = "success";
+                $uid = $auth["msg"];
+                
+            } else {
+                $code = 500;
+            }
+            
+            if ($this->getParam('format') == 'json') {
+                $this->_helper->json(array('data' => $errorMsg, 'uid' => $uid, 'code' => $code));
+            }
+            else {
+                if ($code == 200) {
+                    $this->_redirect($url);
+                }
+                else {
+                    $this->view->error = $errorMsg;
+                }
+            }         
+        } else {
+            if ($this->getParam('register') == 'success') {
+                $this->view->register = 'success';
+            }
+        }
+        
+        $this->view->title = $pageTitle;
+    }
+
 }

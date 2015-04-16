@@ -1,77 +1,116 @@
+<?php
+$user = null;
+$username = "";
+if ($this->me) {
+    $user = $this->me->getUser();
+    $username = $user->username;
+}
+?>
+
 <!DOCTYPE html>
 <html>
     <head>
         <title>芝士电视</title>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
-
-        <link rel="stylesheet" type="text/css" href="<?php echo $this->cssPath("reset.css"); ?>" />
-        <link rel="stylesheet" type="text/css" href="<?php echo $this->cssPath("text.css"); ?>" />
-        <link rel="stylesheet" type="text/css" href="<?php echo $this->cssPath("960gs.css"); ?>" />
-        <link rel="stylesheet" type="text/css" href="<?php echo $this->cssPath("open-sans.css"); ?>" />
-        <link rel="stylesheet" type="text/css" href="<?php echo $this->cssPath("global.css"); ?>" />
-        <link rel="stylesheet" type="text/css" href="<?php echo $this->cssPath("global.mall.css"); ?>" />
-        <link rel="stylesheet" type="text/css" href="<?php echo $this->cssPath("sub.css"); ?>" />
-        <link rel="icon" href="/favicon.ico" mce_href="/favicon.ico" type="image/x-icon" />
-
+        <link href="<?php echo $this->cssPath("bootstrap.css"); ?>" rel="stylesheet" type="text/css" />
+        <link href="<?php echo $this->cssPath("global.css"); ?>" rel="stylesheet" type="text/css" />
+        <link href="<?php echo $this->cssPath("global.show.css"); ?>" rel="stylesheet" type="text/css" />
         <script type="text/javascript" src="<?php echo $this->jsPath('jquery.1.10.2.min.js'); ?>"></script>
+        <script type="text/javascript" src="<?php echo $this->jsPath('bootstrap.min.js'); ?>"></script>
+        <script type="text/javascript" src="<?php echo $this->jsPath('validation.js'); ?>"></script>
         <script type="text/javascript" src="<?php echo $this->jsPath('global.js'); ?>"></script>
         <script type="text/javascript" src="<?php echo $this->jsPath('plugin.js'); ?>"></script>
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+            <script src="http://cdn.bootcss.com/html5shiv/3.7.0/html5shiv.min.js"></script>
+            <script src="http://cdn.bootcss.com/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
         <script type="text/javascript">
-            $(document).ready(function() {
-                $.currency.init();
-                $('#cart-total').html($.cart.total());
+            $('document').ready(function() {
+                // ddl init
+                var profile_txt = $('#profile-txt');
+                if (profile_txt.length > 0) {
+                    profile_txt.click(function() {
+                        $('#tv-header-ddl').clickToggle();
+                    });
+                }
+                
+                $('.model-switch-btn').click(function(){
+                    var $this = $(this).closest('.model-switch-btn');
+                    if($this.hasClass('selected')) {
+                        return;
+                    }
+                    $('.model-switch-btn').removeClass('selected');
+                    $this.addClass('selected');
+                    var id = $this.attr('id');
+                    if(id.indexOf('video') >= 0) {
+                        // video
+                        $('#tv-screen, #tv-cover').css('left', 0).css('position', 'absolute');
+                    } else {
+                        // audio
+                        $('#tv-screen, #tv-cover').css('left', 1000000).css('position', 'fixed');
+                    }
+                });
             });
         </script>
     </head>
 
     <body>
-        <!-- Top Start -->
-        <div class="wp top clearfix">
-            <div class="container_24">
-                <div class="grid_6">
-                    <a href="#" class="logo l-ft"><img src="/img/logo.png" alt="welcome to sitename"/></a>
-                </div>
-                <div class="grid_10">
-                    <div class="search-bar">
-                        <input type="text" placeholder="Search keywords or model #" />
-                    </div>
-                </div>
-                <div class="grid_8">
-                    <div class="info-bar">
-                        <div class="l-ft">
-                            <a href="#">Login</a>
-                        </div>
-                        <span class="vsplr l-ft"></span>
-                        <div class="cart-bar l-ft">
-                            Cart
-                            <a id="cart-total" href="<?php echo $this->url(array(), 'cart') ?>"> 0 </a>
-                        </div>
-                        <span class="vsplr l-ft"></span>
 
-                        <div class="currency-bar l-ft">
-                            <?php foreach ($this->currency as $key => $val): ?>
-                                <a class="price-option" currency="<?php echo $key ?>" currency-symbol="<?php echo $this->currency_symbol[$key] ?>" href="javascript:void(0)"> <?php echo $this->currency_symbol[$key] . ' ' . $key ?> </a>
-                            <?php endforeach; ?>
-                        </div>
-
+        <div id="tv">
+            <div id="tv-header">
+                <div class="wp clearfix">
+                    <div class="clearfix" id="tv-switch">
+                        <span id="tv-to-video" class="selected model-switch-btn"><i class="ico"></i></span>
+                        <span id="tv-to-audio" class="model-switch-btn"><i class="ico"></i></span>
                     </div>
+                    <img id="tv-logo" src="../img/logo-sm.png"/>
+                    <a href='javascript:void(0)' id="fullscreen" class="ico unvisiable"></a>
+                    <div class="spliter" id="rt-spliter"></div>
+                    <?php if ($user): ?>
+                        <div class="pull-right" id="profile-blk">
+                            <a href="javascript:void(0)" id="profile-txt"> <span><?php echo $username ?></span> <i class="ico"></i> </a>
+                            <a href="javascript:void(0)" id="profile-img"><img src="/img/user-default.jpg"/></a>
+                        </div>
+                    <?php else: ?>
+                    <div class="pull-right" id="login-and-register-blk">
+                            <a href="<?php echo $this->url(array(), 'login') ?>">登录</a>
+                            <span> - or - </span>
+                            <a href="<?php echo $this->url(array(), 'register') ?>">注册</a>
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="spliter" id="rt-spliter"></div>
+                    <a href='javascript:void(0)' class="unvisiable" id="refresh"> <i class="ico"></i> 换一批 </a>
+
+                    <ul id="tv-header-ddl" class="ddl">
+                        <li>
+                            <a href="<?php echo $this->url(array(), 'reset-password') ?>"><i class='ico profile'></i> <span class="txt">重设密码</span></a>
+                        </li>
+                        <!--                        <li>
+                                                    <a href="#"><i class='ico list'></i> <span class="txt">查看节目列表</span></a>
+                                                </li>-->
+                        <li class="hspliter">
+                            <a href="<?php echo $this->url(array(), 'logout') ?>"><i class='ico logout'></i> <span class="txt">退出登录</span></a>
+                        </li>
+                    </ul>
                 </div>
-                
+                <div class="spliter"></div>
             </div>
-        </div>
-        <!-- Top End -->
-        <!-- Content Start -->
-        <?php echo $this->layout()->content; ?>
-        <!-- Content End -->
 
-        <!-- Bottom Start -->
-        <div style="background:#F4F4F4;margin-top:20px;padding:20px 0;text-align:center;">
-            <img src="/img/logo.png" />
+            <?php echo $this->layout()->content; ?>
         </div>
-        <!-- Bottom End -->
+        
+
 
 
 
     </body>
 </html>
+
+
+

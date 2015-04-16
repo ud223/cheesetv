@@ -34,12 +34,16 @@ class Angel_Model_User extends Angel_Model_AbstractModel {
     }
 
     public function addManageUser($email, $password, $salt, $checkemail = true) {
-
         $usertype = "admin";
-        return $this->registerUser($email, $password, $usertype, $salt, $checkemail);
+        return $this->registerUser($email, $password, uniqid(), $usertype, $salt, $checkemail);
     }
 
-    protected function registerUser($email, $password, $usertype, $salt, $checkmail) {
+    public function addUser($email, $password, $username, $salt, $checkemail = true) {
+        $usertype = "user";
+        return $this->registerUser($email, $password, $username, $usertype, $salt, $checkemail);
+    }
+
+    protected function registerUser($email, $password, $username, $usertype, $salt, $checkmail) {
         $result = false;
         if (empty($email)) {
             throw new Angel_Exception_User(Angel_Exception_User::EMAIL_EMPTY);
@@ -51,16 +55,19 @@ class Angel_Model_User extends Angel_Model_AbstractModel {
                 if ($this->isEmailExist($email)) {
                     throw new Angel_Exception_User(Angel_Exception_User::EMAIL_NOT_UNIQUE);
                 }
+                if ($this->isUsernameExist($username)) {
+                    throw new Angel_Exception_User(Angel_Exception_User::USERNAME_NOT_UNIQUE);
+                }
             }
         }
 
         $user = new $this->_document_class();
 
         $user->email = $email;
+        $user->username = $username;
         $user->salt = $salt;
         $user->user_type = $usertype;
         $user->password = $password;
-        $user->password_src = $password;
         $user->active_bln = true;
         $user->email_validated_bln = !$checkemail;
         $user->validated_bln = false;
@@ -87,87 +94,46 @@ class Angel_Model_User extends Angel_Model_AbstractModel {
     }
 
     /**
-     * 用户注册
-     * 
-     * @param string $user_type
-     * @param string $email
-     * @param string $username
-     * @param string $password
-     * @param string $salt
-     * @param boolean $checkemail   -   是否要发送email验证邮件
-     * @return mix - when user registration success, return the user id, otherwise, boolean false
-     * @throws Angel_Exception_User 
-     */
-    public function addUser($user_type, $email, $username, $password, $salt, $checkemail = true) {
-        $result = false;
-
-        if (empty($email)) {
-            throw new Angel_Exception_User(Angel_Exception_User::EMAIL_EMPTY);
-        } else {
-            $validation = new Zend_Validate_EmailAddress();
-            if (!$validation->isValid($email)) {
-                throw new Angel_Exception_User(Angel_Exception_User::EMAIL_INVALID);
-            } else {
-                if ($this->isEmailExist($email)) {
-                    throw new Angel_Exception_User(Angel_Exception_User::EMAIL_NOT_UNIQUE);
-                }
-            }
-        }
-
-        $user = new $this->_document_class();
-
-        if (!$user->isUsertypeValid($user_type)) {
-            throw new Angel_Exception_User(Angel_Exception_User::USERTYPE_INVALID);
-        }
-
-        $user->user_type = $user_type;
-        $user->email = $email;
-        $user->username = $username;
-        $user->salt = $salt;
-        $user->password = $password;
-        $user->active_bln = true;
-        $user->email_validated_bln = !$checkemail;
-        $user->validated_bln = false;
-
-        try {
-            $this->_dm->persist($user);
-            $this->_dm->flush();
-
-            $result = $user->id;
-        } catch (Exception $e) {
-            $this->_logger->info(__CLASS__, __FUNCTION__, $e->getMessage() . "\n" . $e->getTraceAsString());
-            throw new Angel_Exception_User(Angel_Exception_User::ADD_USER_FAIL);
-        }
-
-        // send email to the new user to notice him to active his account
-        if ($result && $checkemail) {
-            $this->sendAccountValidationEmail($user);
-        }
-
-        return $result;
-    }
-
-    /**
      * 验证某email地址是否已经存在了
      * 
      * @param string $email － 需要被检测的email地址
      * @return boolean 
      */
-    public function isEmailExist($email, $return_user_model = false) {
+    public function isEmailExist($email, $return_user_model=false){
         $result = false;
         $user = $this->_dm->createQueryBuilder($this->_document_class)
-                ->field('email')->equals($email)
-                ->getQuery()
-                ->getSingleResult();
-
-        if (!empty($user)) {
-            if ($return_user_model) {
+                          ->field('email')->equals($email)
+                          ->getQuery()
+                          ->getSingleResult();
+        
+        if(!empty($user)){
+            if($return_user_model){
                 $result = $user;
-            } else {
+            }
+            else{
                 $result = true;
             }
         }
-
+        
+        return $result;
+    }
+    
+    public function isUsernameExist($username, $return_user_model=false){
+        $result = false;
+        $user = $this->_dm->createQueryBuilder($this->_document_class)
+                          ->field('username')->equals($username)
+                          ->getQuery()
+                          ->getSingleResult();
+        
+        if(!empty($user)){
+            if($return_user_model){
+                $result = $user;
+            }
+            else{
+                $result = true;
+            }
+        }
+        
         return $result;
     }
 
@@ -416,16 +382,18 @@ class Angel_Model_User extends Angel_Model_AbstractModel {
         if (is_object($user)) {
             $password = substr(md5(uniqid(time(), true)), rand(0, 16), 8);
             $user->password = $password;
-
             $params = array("username" => $user->username, "password" => $password);
             $router = Zend_Controller_Front::getInstance()->getRouter();
             $params['url'] = $this->_bootstrap_options['site']['domainurl'] . $router->assemble(array(), 'login');
+            Angel_Model_Email::setCompanyName($this->_bootstrap_options['site']['name']);
             $result = Angel_Model_Email::sendEmail($this->_container->get('email'), Angel_Model_Email::EMAIL_FORGOT_PASSWORD, $user->email, $params);
 
             if ($result) {
                 $this->_dm->persist($user);
                 $this->_dm->flush();
             }
+        } else {
+            throw new Angel_Exception_User(Angel_Exception_User::USER_NOT_FOUND);
         }
 
         return $result;

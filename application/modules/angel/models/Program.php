@@ -21,7 +21,7 @@ class Angel_Model_Program extends Angel_Model_AbstractModel {
      * @return mix - when user registration success, return the user id, otherwise, boolean false
      * @throws Angel_Exception_Program
      */
-    public function addProgram($name, $sub_title, $oss_video, $oss_audio, $author, $duration, $description, $photo, $status, $category, $owner) {
+    public function addProgram($name, $sub_title, $oss_video, $oss_audio, $author, $duration, $description, $photo, $status, $owner, $keyWordIds, $time, $captions) {
         $result = false;
 
         $program = new $this->_document_class();
@@ -38,8 +38,11 @@ class Angel_Model_Program extends Angel_Model_AbstractModel {
         $program->duration = $duration;
         $program->description = $description;
         $program->status = $status;
-        $program->category = $category;
         $program->owner = $owner;
+        $program->keyWordIds = $keyWordIds;
+        $program->time = $time;
+        $program->captions = $captions;
+         
         try {
             $this->_dm->persist($program);
             $this->_dm->flush();
@@ -69,7 +72,7 @@ class Angel_Model_Program extends Angel_Model_AbstractModel {
      * @return mix - when user registration success, return the user id, otherwise, boolean false
      * @throws Angel_Exception_Program
      */
-    public function saveProgram($id, $name, $sub_title, $oss_video, $oss_audio, $author, $duration, $description, $photo, $status, $category) {
+    public function saveProgram($id, $name, $sub_title, $oss_video, $oss_audio, $author, $duration, $description, $photo, $status, $keyWordIds, $time, $captions) {
         $result = false;
 
         $program = $this->getById($id);
@@ -92,7 +95,10 @@ class Angel_Model_Program extends Angel_Model_AbstractModel {
         $program->duration = $duration;
         $program->description = $description;
         $program->status = $status;
-        $program->category = $category;
+        $program->keyWordIds = $keyWordIds;
+        $program->time = $time;
+        $program->captions = $captions;
+
         try {
             $this->_dm->persist($program);
             $this->_dm->flush();
@@ -119,6 +125,11 @@ class Angel_Model_Program extends Angel_Model_AbstractModel {
         return $result;
     }
 
+    public function getProgramByAuthor($author_id) {
+        $result = $this->getBy(true, array('author.$id' => new MongoId($author_id)));
+        return $result;
+    }
+
     public function getProgramByCategory($category_id, $return_as_paginator = true) {
         $query = $this->_dm->createQueryBuilder($this->_document_class)
                 ->field('category.$id')->equals(new MongoId($category_id))
@@ -131,5 +142,59 @@ class Angel_Model_Program extends Angel_Model_AbstractModel {
         }
         return $result;
     }
+    
+    public function getProgramNotOwn($ownProgramId) { 
+        $query = null;
+  
+        if (count($ownProgramId) < 1 || $ownProgramId[0] == "") {
+            $query = $this->_dm->createQueryBuilder($this->_document_class)->find()->sort('created_at', -1);
+        }
+        else {
+            $query = $this->_dm->createQueryBuilder($this->_document_class)->field('id')->notIn($ownProgramId)->sort('created_at', -1);
+        }
 
+        $result = $query
+                ->getQuery();
+        
+        return $result;
+    }
+    
+    public function getProgramBySpecialId($specialOwnProgramIds) {
+        if (count($specialOwnProgramIds) < 1 || $specialOwnProgramIds[0] == "") {
+            return null;
+        }
+        
+        $query = $this->_dm->createQueryBuilder($this->_document_class)->field('id')->in($specialOwnProgramIds)->sort('created_at', -1);
+
+        $result = $query
+                ->getQuery();
+
+        return $result;
+    }
+    
+    public function getProgramByKeyword($keywordId) {
+        $query = $this->_dm->createQueryBuilder($this->_document_class)->sort('created_at', -1);
+
+        $result = $query
+                ->getQuery();
+       
+        if (count($result) == 0)
+            return false;
+        
+        foreach ($result as $program) {
+            $tmpKeywords = $program->keyWordIds;
+            
+            if ($tmpKeywords == "")
+                continue;
+            
+            $keywords = explode(",", $tmpKeywords);
+
+            foreach ($keywords as $keyword) {
+                if ($keyword == $keywordId)
+                    return true;
+            }
+        }
+        
+        return false;
+    }
 }
